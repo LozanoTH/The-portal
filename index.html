@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cubo Rubik Celestial</title>
+  <style>
+    body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000 url("tu-video.gif") center center / cover no-repeat;
+  overflow: hidden;
+}
+
+    /* Video de fondo */
+    #bg-video {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -2;
+      filter: brightness(0.3) saturate(1.2);
+    }
+
+    /* Cubo */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 200px);
+      grid-template-rows: repeat(2, 200px);
+      gap: 8px;
+      position: relative;
+      border-radius: 16px;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 0 40px rgba(255,255,255,0.2);
+      transition: box-shadow 0.6s ease;
+      z-index: 5;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 16px;
+      font-size: 28px;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(0,0,0,0.6);
+      transition: transform 0.2s ease, filter 0.3s ease;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+      filter: brightness(1.3);
+    }
+
+    /* Colores Rubik */
+    .btn[data-num="1"] {
+      background: linear-gradient(135deg, #ff4d4d, #cc0000);
+    }
+    .btn[data-num="2"] {
+      background: linear-gradient(135deg, #ffee58, #fbc02d);
+      color: #000;
+    }
+    .btn[data-num="3"] {
+      background: linear-gradient(135deg, #66bb6a, #2e7d32);
+    }
+    .btn[data-num="4"] {
+      background: linear-gradient(135deg, #42a5f5, #1565c0);
+    }
+
+    .btn.active-glow {
+      box-shadow: 0 0 25px 8px rgba(255,255,255,0.9);
+      animation: pulse 0.8s ease forwards;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* Pantalla blanca */
+    #transition {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      opacity: 0;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .white-grow {
+      animation: growWhite 2s forwards;
+    }
+    .white-fade {
+      animation: fadeWhite 2s forwards;
+    }
+
+    @keyframes growWhite {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    @keyframes fadeWhite {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cubo Rubik -->
+  <div class="grid" id="cube">
+    <button class="btn" data-num="1">1</button>
+    <button class="btn" data-num="2">2</button>
+    <button class="btn" data-num="3">3</button>
+    <button class="btn" data-num="4">4</button>
+  </div>
+
+  <!-- Pantalla de transición -->
+  <div id="transition"></div>
+
+  <!-- Audios -->
+  <audio id="sound1" src="sounds/1.mp3" preload="auto"></audio>
+  <audio id="sound2" src="sounds/2.mp3" preload="auto"></audio>
+  <audio id="sound3" src="sounds/3.mp3" preload="auto"></audio>
+  <audio id="sound4" src="sounds/4.mp3" preload="auto"></audio>
+  <audio id="success" src="sounds/5.mp3" preload="auto"></audio>
+
+  <script>
+    let energy = 0; 
+    const cube = document.getElementById("cube");
+    const transition = document.getElementById("transition");
+
+    const sounds = {
+      1: document.getElementById("sound1"),
+      2: document.getElementById("sound2"),
+      3: document.getElementById("sound3"),
+      4: document.getElementById("sound4"),
+    };
+    const successSound = document.getElementById("success");
+
+    const pattern = ["1", "2", "3", "4"];
+    let input = [];
+
+    function updateGlow() {
+      const maxGlow = 120; 
+      const glowLevel = (energy / 4) * maxGlow;
+      cube.style.boxShadow = `
+        0 0 ${glowLevel}px ${glowLevel/4}px rgba(255,255,255,0.9),
+        0 0 ${glowLevel*1.5}px ${glowLevel/2}px rgba(200,200,255,0.6)
+      `;
+    }
+
+    function playSound(num) {
+      if (sounds[num]) {
+        const clone = sounds[num].cloneNode();
+        clone.play();
+      }
+    }
+
+    document.querySelectorAll(".btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const num = btn.dataset.num;
+        playSound(num);
+
+        document.querySelectorAll(".btn").forEach(b => b.classList.remove("active-glow"));
+        btn.classList.add("active-glow");
+
+        energy++;
+        if (energy > 4) energy = 4;
+        updateGlow();
+
+        input.push(num);
+
+        if (input.length === 4) {
+          if (JSON.stringify(input) === JSON.stringify(pattern)) {
+            // 🎶 sonido de éxito
+            successSound.currentTime = 0;
+            successSound.play();
+
+            // 🌟 animación pantalla blanca creciente
+            transition.classList.remove("white-fade");
+            void transition.offsetWidth; // reinicio
+            transition.classList.add("white-grow");
+
+            // 🔗 después de 2s, redirige
+            setTimeout(() => {
+              window.location.href = "/love/index.html";
+            }, 4000);
+
+          } else {
+            // ❌ reset
+            setTimeout(() => {
+              energy = 0;
+              cube.style.boxShadow = "none";
+              input = [];
+              document.querySelectorAll(".btn").forEach(b => b.classList.remove("active-glow"));
+            }, 1000);
+          }
+        }
+      });
+    });
+
+    // Cuando la nueva página cargue → desvanecer blanco
+    window.addEventListener("load", () => {
+      transition.classList.remove("white-grow");
+      void transition.offsetWidth;
+      transition.classList.add("white-fade");
+    });
+  </script>
+</body>
+</html>
